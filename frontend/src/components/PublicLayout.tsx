@@ -9,7 +9,7 @@ export default function PublicLayout() {
             BraidsByChi
           </Link>
           <nav className="text-sm text-stone-500">
-            <Link to="/" className="hover:text-brand-600">
+            <Link to="/book" className="hover:text-brand-600">
               Book now
             </Link>
           </nav>

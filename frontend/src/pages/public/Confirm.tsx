@@ -24,7 +24,7 @@ export default function Confirm() {
         <p className="text-stone-500">
           If you just submitted a request, look for a confirmation email with a link to manage your booking.
         </p>
-        <Link to="/">
+        <Link to="/book">
           <PrimaryButton>Back to booking</PrimaryButton>
         </Link>
       </div>

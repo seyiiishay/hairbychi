@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { createSetupIntent, precheckBooking, createBooking } from "../../api/endpoints";
 import type { PaymentMethod, PrecheckResponse } from "../../api/types";
@@ -42,8 +42,9 @@ export default function Payment() {
   }, [paymentMethod, clientSecret]);
 
   if (items.length === 0 || !selectedSlotStart || !guestDetails) {
-    navigate("/");
-    return null;
+    // <Navigate> so this also works on a hard/direct page load, not just
+    // when arriving via client-side navigation from a previous step.
+    return <Navigate to="/book" replace />;
   }
 
   const canSubmit =

@@ -41,7 +41,7 @@ export default function Slots() {
     return (
       <div className="space-y-4">
         <p className="text-stone-500">Add a service before choosing a time.</p>
-        <PrimaryButton onClick={() => navigate("/")}>Browse services</PrimaryButton>
+        <PrimaryButton onClick={() => navigate("/book")}>Browse services</PrimaryButton>
       </div>
     );
   }

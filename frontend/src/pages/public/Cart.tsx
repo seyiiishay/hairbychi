@@ -12,7 +12,7 @@ export default function Cart() {
       <div className="space-y-4">
         <WizardSteps current={1} />
         <p className="text-stone-500">Your cart is empty.</p>
-        <PrimaryButton onClick={() => navigate("/")}>Browse services</PrimaryButton>
+        <PrimaryButton onClick={() => navigate("/book")}>Browse services</PrimaryButton>
       </div>
     );
   }
@@ -57,7 +57,7 @@ export default function Cart() {
       )}
 
       <div className="flex justify-between">
-        <SecondaryButton onClick={() => navigate("/")}>Add more services</SecondaryButton>
+        <SecondaryButton onClick={() => navigate("/book")}>Add more services</SecondaryButton>
         <PrimaryButton onClick={() => navigate("/book/slots")}>Choose a time</PrimaryButton>
       </div>
     </div>

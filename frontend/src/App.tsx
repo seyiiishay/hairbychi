@@ -3,6 +3,7 @@ import PublicLayout from "./components/PublicLayout";
 import AdminLayout from "./components/AdminLayout";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
+import Home from "./pages/public/Home";
 import Browse from "./pages/public/Browse";
 import Cart from "./pages/public/Cart";
 import Slots from "./pages/public/Slots";
@@ -27,7 +28,8 @@ export default function App() {
   return (
     <Routes>
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<Browse />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/book" element={<Browse />} />
         <Route path="/book/cart" element={<Cart />} />
         <Route path="/book/slots" element={<Slots />} />
         <Route path="/book/details" element={<Details />} />

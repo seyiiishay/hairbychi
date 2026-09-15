@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { ErrorBanner, PrimaryButton, SecondaryButton, WizardSteps } from "../../components/Shared";
@@ -15,8 +15,10 @@ export default function Details() {
   const [error, setError] = useState<string | null>(null);
 
   if (items.length === 0 || !selectedSlotStart) {
-    navigate("/");
-    return null;
+    // <Navigate> (not an imperative navigate() call) so the redirect also
+    // works on a hard/direct page load, not just when arriving via
+    // client-side navigation from a previous step.
+    return <Navigate to="/book" replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
