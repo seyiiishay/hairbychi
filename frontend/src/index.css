@@ -1,24 +1,150 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------
+   Hair by Chi design system
+   Warm ivory ground, charcoal-brown ink, champagne gold + muted rose.
+   ------------------------------------------------------------------ */
 @theme {
+  --font-serif: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-sans: "Manrope Variable", "Manrope", "Inter", system-ui, -apple-system, sans-serif;
+
+  --color-ivory: #faf7f2;
+  --color-cream: #f4eee5;
+  --color-sand: #ede4d8;
+  --color-sand-deep: #dfd2c1;
+  --color-ink: #1c1816;
+  --color-ink-soft: #3a322d;
+  --color-muted: #6f645c;
+  --color-line: #e3d9cc;
+  --color-gold: #b99563;
+  --color-gold-deep: #8f6f43;
+  --color-gold-soft: #e9dcc6;
+  --color-rose: #d9b5aa;
+  --color-rose-soft: #f3e3dd;
+  --color-rose-deep: #a8756a;
+  --color-success: #4f7a5a;
+  --color-success-soft: #e4eee5;
+  --color-warning: #a8742a;
+  --color-warning-soft: #f7ecd9;
+  --color-error: #a64a3f;
+  --color-error-soft: #f6e1dd;
+
+  /* legacy tokens still referenced by the previous build's files */
   --color-brand-50: #fdf4f0;
   --color-brand-100: #fbe7de;
-  --color-brand-200: #f4c8b3;
-  --color-brand-300: #eba482;
-  --color-brand-400: #de7a51;
-  --color-brand-500: #c85a30;
-  --color-brand-600: #a8451f;
-  --color-brand-700: #85361a;
-  --color-brand-800: #632918;
-  --color-brand-900: #422014;
+  --color-brand-500: #b99563;
+  --color-brand-600: #8f6f43;
+  --color-brand-700: #6f5533;
+
+  --radius-card: 1.25rem;
+
+  --animate-fade-up: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: -400px 0;
+    }
+    to {
+      background-position: 400px 0;
+    }
+  }
 }
 
-html,
-body,
-#root {
-  height: 100%;
+@layer base {
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900;
+  @apply bg-ivory font-sans text-ink antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-gold-soft);
+  color: var(--color-ink);
+}
+
+/* Visible, on-brand focus ring for keyboard users everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-gold-deep);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.eyebrow {
+  @apply text-[0.7rem] font-semibold tracking-[0.28em] text-gold-deep uppercase;
+}
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-sand) 0%, var(--color-cream) 50%, var(--color-sand) 100%);
+  background-size: 800px 100%;
+  @apply animate-shimmer rounded-xl;
+}
+
+/* Scroll-reveal: elements start hidden only when JS has marked them */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }
