@@ -1,4 +1,132 @@
-# BraidsByChi — Online Booking & Payment Platform
+# Hair by Chi: Luxury Salon Website & Booking Platform
+
+A premium, editorial website for a modern hair studio: discovery, a 5-step
+booking flow with add-ons and deposits, customer accounts, and a private
+owner dashboard ("Studio").
+
+```
+frontend/   React 19 + Vite + TypeScript + Tailwind v4: the website, accounts and Studio dashboard
+backend/    Django + DRF API from the first build (unchanged, see "Backend API" below)
+```
+
+## Run it
+
+```bash
+cd frontend
+npm install
+npm run dev            # http://localhost:5173
+npm run build          # production build in frontend/dist
+```
+
+No backend or API keys are needed to try the whole product. See
+[How data works right now](#how-data-works-right-now).
+
+| Demo login | Email | Password |
+|---|---|---|
+| Customer (`/signin`) | `sarah@example.com` | `hairbychi` |
+| Owner (`/studio/login`) | `owner@hairbychi.ca` | `studio2026` |
+
+## What's in it
+
+**Customer site**: Home (hero, quick-booking bar, popular services,
+categories, why us, before/after sliders, stylists, portfolio, how it works,
+reviews, first-visit offer, FAQ, Instagram strip, final CTA) · Services with
+category, price, duration, stylist and "available this week" filters ·
+Service detail pages with facts, inclusions, prep, add-ons and policy ·
+Lookbook with filters, full-screen viewer and "Book this look" · About ·
+Stylists and profiles with next openings · Reviews · Contact with hours, map
+and form · FAQ · Policies · Find My Style quiz · Inspiration upload
+(consultation request) · Sign in / register / reset password.
+
+**Booking**: Service (+ "Make it yours" add-ons) → Stylist (or no
+preference) → Date & Time → Details (hair questions, reference photo) →
+Review & Payment (deposit or full, promo codes, policy consent) →
+Confirmation (.ics / Google Calendar, directions). Availability honours
+salon hours, special hours, each stylist's days and hours, existing
+bookings, a clean-up buffer, blocked time and minimum notice. The slot is
+re-checked just before "payment", so a race shows *"That appointment was just
+booked by another client"* with the closest alternatives. Fully booked days
+offer **View next available date** and **Join waitlist**. Consultation-first
+services (colour, bridal, custom units) book as a pending consultation.
+
+**Customer account**: overview with upcoming appointment, Beauty Rewards
+progress and "Book again"; appointments (view, reschedule, cancel with the
+policy outcome shown first, add to calendar, review after completion); saved
+looks (♡ on any style or photo, kept for guests and merged on sign-in);
+payments; profile and hair preferences. Guests manage bookings at
+`/appointment/<ref>` by confirming their email.
+
+**Studio (owner dashboard)**: dashboard KPIs and today's schedule with Check
+in / Start / Complete / No-show / Cancel · calendar (day / week / month,
+block time) · appointments (search, filters, detail drawer, refunds) · inbox
+(messages, consultation requests with photos, waitlist) · customers (spend,
+visits, no-shows, history) · services (full editor, including photo, add-ons,
+stylists, consultation and active flags) · staff (hours, days, commission,
+time off, 30-day stats) · payments · review moderation · discounts · gallery
+uploads · reports (revenue by month, top services, stylist performance and
+commission, no-show / cancellation / add-on rates) · settings (weekly hours,
+holidays, booking rules that feed the policy copy, reminder outbox, reset
+demo).
+
+Statuses: Pending, Confirmed, Checked in, In progress, Completed, Cancelled,
+No-show.
+
+## Design system
+
+`frontend/src/index.css` defines the tokens: ivory `#FAF7F2`, ink
+`#1C1816`, sand `#EDE4D8`, gold `#B99563`, rose `#D9B5AA`, plus status colours.
+Type is Cormorant Garamond (headings) with Manrope (body), both self-hosted
+through Fontsource. Shared components live in `frontend/src/ui/`: buttons
+(primary / secondary / text), form fields, service / stylist / review cards,
+calendar, date-time picker, modal, before/after slider, toasts, empty states and
+skeletons. The site is mobile-first, with a sticky Book Now bar and a price
++ Book bar on service pages. Accessibility: visible focus rings,
+keyboard-operable dialogs and sliders, labelled fields, and availability
+shown with text and shape rather than colour alone. Reduced-motion
+preferences are respected.
+
+**Photography:** every image slot shows an on-brand illustration until a
+real photo is dropped into `frontend/public/images/` at the documented path
+(see `frontend/public/images/README.md`), or uploaded from the Studio.
+
+## How data works right now
+
+> ⚠️ **The new frontend runs on a browser-local demo data layer, not the Django API.**
+
+All catalogue data, bookings, accounts and settings live in
+`frontend/src/store/store.ts`, seeded from `frontend/src/data/catalog.ts` and
+persisted to `localStorage`. This lets the complete product be clicked
+through as a static site, but it is **not production-safe**:
+
+- **Auth is demo-only.** Passwords are hashed client-side for storage
+  hygiene only, and roles are checked in the browser. Real login, email
+  verification, password reset and role-based access must be server-side.
+- **Payments are simulated.** The card field is a placeholder; nothing is
+  charged. Wire Stripe Payment Element / Apple Pay / Google Pay via a server-
+  created PaymentIntent (the existing backend already has Stripe plumbing).
+- **Emails and reminders are simulated** as an outbox visible in Studio →
+  Settings.
+- **Data is per-browser.** Clients can't see each other's bookings and the
+  owner can't see real bookings until the store is backed by the API.
+
+Every mutation is a single function in `store/store.ts` or `store/studio.ts`,
+which is the seam to replace with API calls. The Django backend does not yet
+model multiple stylists, add-ons, customer accounts, reviews, gallery,
+waitlist or discounts, so those need new models and endpoints first.
+
+The previous frontend's files (`src/api`, `src/components`, `src/context`,
+`src/pages/public`, `src/pages/admin`, and the old `src/lib` helpers) are no
+longer routed and can be deleted once the API integration no longer needs them
+for reference.
+
+## Deploying the frontend
+
+`frontend/vercel.json` rewrites all routes to `index.html` for client-side
+routing. On another static host, add the equivalent SPA fallback.
+
+---
+
+# Backend API (first build)
 
 A guest-only booking site for an independent hair stylist: clients browse
 services, pick a time, and submit a **request** (never an instant booking);

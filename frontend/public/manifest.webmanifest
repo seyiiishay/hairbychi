@@ -1,15 +1,14 @@
 {
-  "name": "BraidsByChi",
-  "short_name": "BraidsByChi",
-  "description": "Book an appointment with BraidsByChi",
+  "name": "Hair by Chi",
+  "short_name": "Hair by Chi",
+  "description": "Modern protective styling, beautifully personal. Book online.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fdf4f0",
-  "theme_color": "#c85a30",
+  "background_color": "#faf7f2",
+  "theme_color": "#faf7f2",
   "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
