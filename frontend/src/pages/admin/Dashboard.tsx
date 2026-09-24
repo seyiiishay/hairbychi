@@ -4,7 +4,8 @@ import {
   adminListBookings,
   adminBatchBookings,
   adminListResolutionQueue,
-  adminResolveConflict,
+  adminResolveCancel,
+  adminResolveReschedule,
 } from "../../api/endpoints";
 import type { AdminBookingListItem } from "../../api/types";
 import { formatDate, formatTime, money } from "../../lib/timezone";
@@ -164,7 +165,7 @@ function ResolutionQueueSection({
 
   const handleCancel = async (id: string) => {
     if (!window.confirm("Cancel this booking and refund the client?")) return;
-    await adminResolveConflict(id, "cancel");
+    await adminResolveCancel(id);
     onChanged();
   };
 
@@ -225,7 +226,7 @@ function ResolutionRescheduleModal({
   const handleConfirm = async () => {
     if (!selectedSlot) return;
     try {
-      await adminResolveConflict(booking.id, "reschedule", selectedSlot);
+      await adminResolveReschedule(booking.id, selectedSlot);
       onDone();
     } catch (err) {
       setError(err instanceof ApiRequestError ? errorMessage(err.code, err.message) : "Something went wrong.");

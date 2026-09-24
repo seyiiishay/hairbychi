@@ -150,6 +150,13 @@ export interface AvailabilityBlock {
   created_at: string;
 }
 
+export interface AvailabilityException {
+  id: number;
+  date: string;
+  reason: string;
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   name: string;

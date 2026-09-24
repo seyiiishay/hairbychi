@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { getAdminToken, setAdminToken } from "../api/client";
-import { adminSessionCheck, adminLogout as apiLogout } from "../api/endpoints";
 
 interface AdminAuthContextValue {
   isAuthenticated: boolean;
@@ -19,20 +18,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getAdminToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    adminSessionCheck()
-      .then((data) => {
-        setIsAuthenticated(true);
-        setUsername(data.username);
-      })
-      .catch(() => {
-        setAdminToken(null);
-        setIsAuthenticated(false);
-      })
-      .finally(() => setIsLoading(false));
+    setIsAuthenticated(Boolean(token));
+    setUsername(token ? "admin" : null);
+    setIsLoading(false);
   }, []);
 
   const login = (token: string) => {
@@ -41,11 +29,6 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      await apiLogout();
-    } catch {
-      // ignore — we're clearing local state regardless
-    }
     setAdminToken(null);
     setIsAuthenticated(false);
     setUsername(null);

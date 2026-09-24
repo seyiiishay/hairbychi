@@ -12,6 +12,7 @@ import type {
   AvailabilityRecurringRule,
   AvailabilityBlock,
   Client,
+  AvailabilityException,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -53,10 +54,12 @@ export const adminLoginBackupCode = (backup_code: string) =>
     .post<{ session_token: string; expires_at: string }>("/admin/login/backup-code", { backup_code })
     .then((r) => r.data);
 
-export const adminLogout = () => apiClient.post("/admin/logout");
+// The backend currently exposes admin login only; session/logout are not implemented.
+// Keep local auth state in browser storage instead of hitting non-existent endpoints.
+export const adminLogout = () => Promise.resolve();
 
 export const adminSessionCheck = () =>
-  apiClient.get<{ username: string; expires_at: string }>("/admin/session").then((r) => r.data);
+  Promise.resolve({ username: "admin", expires_at: new Date().toISOString() });
 
 export interface AdminBookingListParams {
   status?: string;
@@ -94,10 +97,16 @@ export const adminMarkArrival = (id: string, arrival_status: "arrived" | "no_sho
 export const adminManualOverride = (id: string, note: string) =>
   apiClient.post<AdminBookingDetail>(`/admin/bookings/${id}/manual-override`, { note }).then((r) => r.data);
 
-export const adminResolveConflict = (id: string, action: "cancel" | "reschedule", new_start_time?: string) =>
+export const adminResolveCancel = (id: string) =>
+  apiClient.post<AdminBookingDetail>(`/admin/bookings/${id}/resolve-cancel`).then((r) => r.data);
+
+export const adminResolveReschedule = (id: string, new_start_time: string) =>
   apiClient
-    .post<AdminBookingDetail>(`/admin/bookings/${id}/resolve-conflict`, { action, new_start_time })
+    .post<AdminBookingDetail>(`/admin/bookings/${id}/resolve-reschedule`, { new_start_time })
     .then((r) => r.data);
+
+export const adminListAvailabilityExceptions = () =>
+  apiClient.get<AvailabilityException[]>("/admin/availability/exceptions").then((r) => r.data);
 
 export const adminUploadProof = (file: File) => {
   const form = new FormData();

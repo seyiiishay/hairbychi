@@ -1,11 +1,13 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { addDays } from "date-fns";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { getCategories } from "../../api/endpoints";
+import type { Category as ApiCategory } from "../../api/types";
 import { CATEGORIES } from "../../data/catalog";
 import type { CategoryId } from "../../data/types";
 import { slotsOn } from "../../lib/availability";
-import { cn, dateKey } from "../../lib/format";
+import { cn, dateKey, money } from "../../lib/format";
 import { useStore } from "../../store/store";
 import { Container, EmptyState, PageHeader, Reveal } from "../../ui/bits";
 import { ServiceCard } from "../../ui/cards";
@@ -50,6 +52,37 @@ export default function Services() {
   const [stylist, setStylist] = useState("any");
   const [thisWeek, setThisWeek] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [liveCategories, setLiveCategories] = useState<ApiCategory[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getCategories()
+      .then((res) => {
+        if (active) setLiveCategories(res.results);
+      })
+      .catch(() => {
+        if (active) setLiveCategories([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const liveServices = useMemo(
+    () =>
+      (liveCategories ?? []).flatMap((cat) =>
+        cat.services.map((svc) => ({
+          id: svc.id,
+          name: svc.name,
+          price: Number(svc.price),
+          minutes: Number(svc.duration_minutes),
+          categoryId: cat.id,
+          photo_url: svc.photo_url,
+          description: svc.description,
+        })),
+      ),
+    [liveCategories],
+  );
 
   const setCategory = (c: string) => {
     const next = new URLSearchParams(params);
@@ -69,14 +102,20 @@ export default function Services() {
     return ok;
   }, [thisWeek, s, stylist]);
 
-  const list = s.services.filter((svc) => {
-    if (!svc.active) return false;
+  const sourceServices = liveServices.length > 0 ? liveServices : s.services;
+
+  const list = sourceServices.filter((svc: any) => {
+    const isLocal = "active" in svc && typeof svc.active === "boolean";
+    if (isLocal && !svc.active) return false;
     if (category !== "all" && svc.categoryId !== category) return false;
-    if (q && !`${svc.name} ${svc.tagline}`.toLowerCase().includes(q.toLowerCase())) return false;
-    if (!PRICE.find((p) => p.id === price)!.test(svc.price)) return false;
-    if (!TIME.find((t) => t.id === time)!.test(svc.minutes)) return false;
-    if (stylist !== "any" && !svc.stylistIds.includes(stylist)) return false;
-    if (availableThisWeek && !availableThisWeek.has(svc.id)) return false;
+    const searchableText = typeof svc.tagline === "string" ? `${svc.name} ${svc.tagline}` : `${svc.name} ${svc.description ?? ""}`;
+    if (q && !searchableText.toLowerCase().includes(q.toLowerCase())) return false;
+    const numericPrice = typeof svc.price === "number" ? svc.price : Number(svc.price ?? 0);
+    if (!PRICE.find((p) => p.id === price)!.test(numericPrice)) return false;
+    const durationMinutes = Number(svc.minutes ?? svc.duration_minutes ?? 0);
+    if (!TIME.find((t) => t.id === time)!.test(durationMinutes)) return false;
+    if (stylist !== "any" && isLocal && !svc.stylistIds.includes(stylist)) return false;
+    if (availableThisWeek && isLocal && !availableThisWeek.has(svc.id)) return false;
     return true;
   });
 
@@ -188,11 +227,42 @@ export default function Services() {
         </div>
         {list.length ? (
           <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {list.map((svc, i) => (
-              <Reveal key={svc.id} delay={(i % 4) * 60}>
-                <ServiceCard service={svc} />
-              </Reveal>
-            ))}
+            {list.map((svc: any, i: number) => {
+              if (liveServices.length > 0 && !("active" in svc)) {
+                return (
+                  <Reveal key={svc.id} delay={(i % 4) * 60}>
+                    <div className="group block">
+                      <div className="relative overflow-hidden rounded-[var(--radius-card)]">
+                        <img
+                          src={svc.photo_url || "/images/placeholder-service.jpg"}
+                          alt={svc.name}
+                          className="aspect-[4/5] w-full rounded-[var(--radius-card)] object-cover transition duration-500 group-hover:scale-[1.02]"
+                        />
+                      </div>
+                      <div className="mt-4 flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-[1.6rem] leading-tight">{svc.name}</h3>
+                          <p className="mt-1 text-sm text-muted">{svc.minutes ?? svc.duration_minutes} mins · {money(Number(svc.price))}</p>
+                        </div>
+                        <Link
+                          to={`/services/${svc.id}`}
+                          className="mt-1 grid size-9 shrink-0 place-items-center rounded-full border border-line transition hover:border-ink hover:bg-ink hover:text-ivory"
+                          aria-label={`View ${svc.name}`}
+                        >
+                          <span aria-hidden>↗</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </Reveal>
+                );
+              }
+
+              return (
+                <Reveal key={svc.id} delay={(i % 4) * 60}>
+                  <ServiceCard service={svc} />
+                </Reveal>
+              );
+            })}
           </div>
         ) : (
           <EmptyState
