@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Check, Clock, CreditCard, ImagePlus, Lock, ShieldCheck, Sparkles, Trash2, Users } from "lucide-react";
+import { createBooking, getCategories } from "../../api/endpoints";
+import type { Category as ApiCategory } from "../../api/types";
 import { CATEGORIES } from "../../data/catalog";
 import type { Appointment, BookingAnswers, CategoryId, Service } from "../../data/types";
-import { isSlotFree, nextAvailable, slotsOn, type Slot } from "../../lib/availability";
-import { bookingRef, clock, cn, duration, longDate, money } from "../../lib/format";
+import { type Slot } from "../../lib/availability";
+import { clock, cn, duration, longDate, money } from "../../lib/format";
 import { quote } from "../../lib/pricing";
-import { createAppointment, currentUser, getState, useStore } from "../../store/store";
+import { createAppointment, currentUser, useStore } from "../../store/store";
+import CaptchaWidget from "../../components/CaptchaWidget";
 import { Button } from "../../ui/Button";
 import { Container, Stars } from "../../ui/bits";
 import { priceLabel } from "../../ui/cards";
@@ -129,6 +132,8 @@ export default function Book() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
   const [failure, setFailure] = useState<{ message: string; alternatives?: { date: string; slots: Slot[] } } | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [liveCategories, setLiveCategories] = useState<ApiCategory[] | null>(null);
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -140,12 +145,45 @@ export default function Book() {
     }
   }, [draft]);
 
+  useEffect(() => {
+    let active = true;
+    getCategories()
+      .then((response) => {
+        if (active) setLiveCategories(response.results);
+      })
+      .catch(() => {
+        if (active) setLiveCategories([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Prefill contact details for signed-in clients
   useEffect(() => {
     if (user && !draft.email) update({ firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone });
   }, [user?.id]);
 
-  const service = s.services.find((x) => x.id === draft.serviceId && x.active);
+  const liveServices = useMemo(
+    () =>
+      (liveCategories ?? []).flatMap((cat) =>
+        cat.services.map((apiService) => {
+          const local = s.services.find((item) => item.name.toLowerCase() === apiService.name.toLowerCase());
+          return {
+            ...(local ?? s.services[0]),
+            id: apiService.id,
+            name: apiService.name,
+            description: apiService.description,
+            price: Number(apiService.price),
+            minutes: apiService.duration_minutes,
+            categoryId: local?.categoryId ?? category,
+          };
+        }),
+      ),
+    [liveCategories, s.services, category],
+  );
+  const catalogServices = liveServices.length ? liveServices : s.services;
+  const service = catalogServices.find((x) => x.id === draft.serviceId && x.active);
   const q = service ? quote(s, service, draft.addOnIds, { code: draft.code, email: draft.email, paymentType: draft.paymentType }) : null;
   const stylist = draft.slot ? s.stylists.find((x) => x.id === draft.slot!.stylistId) : null;
   const eligibleStylists = service ? s.stylists.filter((st) => st.active && service.stylistIds.includes(st.id)) : [];
@@ -172,7 +210,7 @@ export default function Book() {
     !!service && (draft.stylistId === "any" || eligibleStylists.some((x) => x.id === draft.stylistId)),
     !!draft.slot,
     true,
-    draft.agree,
+    draft.agree && !!captchaToken,
   ][step];
 
   const next = () => {
@@ -188,30 +226,29 @@ export default function Book() {
     if (!service || !q || !draft.slot) return;
     setProcessing(true);
     setFailure(null);
-    // Simulated payment round-trip. A live build creates a PaymentIntent server-side
-    // and confirms it with the provider's SDK; card data never touches our code.
-    setTimeout(() => {
-      const slot = draft.slot!;
-      const s = getState(); // re-read: someone may have booked while we were "processing"
-      const candidate = { stylistId: slot.stylistId, date: slot.date, time: slot.time, minutes: q.minutes };
-      if (!isSlotFree(s, service, candidate)) {
-        const same = slotsOn(s, service, draft.stylistId, slot.date, q.minutes);
-        setFailure({
-          message: "That appointment was just booked by another client. Here are the closest available times. Your card has not been charged.",
-          alternatives: same.length ? { date: slot.date, slots: same.slice(0, 6) } : (nextAvailable(s, service, draft.stylistId, slot.date, q.minutes) ?? undefined),
-        });
-        setProcessing(false);
-        return;
-      }
+    const slot = draft.slot;
+    const requestedStart = new Date(`${slot.date}T${slot.time}:00`).toISOString();
+    createBooking({
+      client: {
+        name: `${draft.firstName.trim()} ${draft.lastName.trim()}`,
+        email: draft.email.trim().toLowerCase(),
+        phone: draft.phone.trim(),
+      },
+      service_ids: [service.id],
+      requested_start_time: requestedStart,
+      payment_method: "offline",
+      policy_acknowledged: draft.agree,
+      captcha_token: captchaToken || "dev-bypass-token",
+    }).then((response) => {
       const appt: Appointment = {
-        ref: bookingRef(),
-        serviceId: service.id,
+        ref: response.manage_token,
+        serviceId: s.services.find((item) => item.name.toLowerCase() === service.name.toLowerCase())?.id ?? service.id,
         stylistId: slot.stylistId,
         addOnIds: draft.addOnIds,
         date: slot.date,
         time: slot.time,
         minutes: q.minutes,
-        status: service.consultation ? "pending" : "confirmed",
+        status: response.status === "approved" ? "confirmed" : "pending",
         customer: { firstName: draft.firstName.trim(), lastName: draft.lastName.trim(), email: draft.email.trim().toLowerCase(), phone: draft.phone.trim() },
         answers: draft.answers,
         notes: draft.notes.trim(),
@@ -220,8 +257,8 @@ export default function Book() {
         discount: q.discount,
         discountCode: q.discountCode,
         total: q.total,
-        deposit: q.deposit,
-        paid: q.dueNow,
+        deposit: Number(response.deposit_amount),
+        paid: Number(response.amount_due_today),
         paymentType: draft.paymentType,
         paymentMethod: draft.method,
         createdAt: new Date().toISOString(),
@@ -236,10 +273,13 @@ export default function Book() {
         setFailure({ message: "We couldn't complete your booking. Your card has not been charged. Please try again." });
         setProcessing(false);
       }
-    }, 1800);
+    }).catch(() => {
+      setFailure({ message: "We couldn't complete your booking. No payment was taken. Please check your details and try again." });
+      setProcessing(false);
+    });
   };
 
-  const categoryServices = s.services.filter((x) => x.categoryId === category && x.active);
+  const categoryServices = catalogServices.filter((x) => x.categoryId === category && x.active);
 
   return (
     <div ref={top} className="scroll-mt-24 bg-ivory pb-40 md:pb-24">
@@ -637,6 +677,10 @@ export default function Book() {
                     </Link>
                     .
                   </Checkbox>
+                  <div className="mt-5">
+                    <p className="mb-2 text-sm font-semibold">Quick human check</p>
+                    <CaptchaWidget onVerify={setCaptchaToken} />
+                  </div>
                 </section>
               </>
             ) : null}

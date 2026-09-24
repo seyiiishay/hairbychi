@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { addDays, startOfMonth } from "date-fns";
+import { addDays, format, startOfMonth } from "date-fns";
 import { BellRing, CalendarSearch } from "lucide-react";
+import { getSlots } from "../api/endpoints";
 import type { Service } from "../data/types";
 import { dayStatus, nextAvailable, slotsOn, type Slot } from "../lib/availability";
 import { clock, cn, dateKey, longDate, monthDay, parseDateKey, toMinutes, uid } from "../lib/format";
@@ -46,19 +47,38 @@ export default function DateTimePicker({
   const [date, setDate] = useState<string | undefined>(value?.date ?? initialDate);
   const [month, setMonth] = useState(startOfMonth(parseDateKey(value?.date ?? initialDate ?? dateKey(today))));
   const [loading, setLoading] = useState(false);
+  const [apiSlots, setApiSlots] = useState<Slot[] | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   // Brief, intentional "finding times" state: availability would come from the server
   useEffect(() => {
     if (!date) return;
     setLoading(true);
-    const t = setTimeout(() => setLoading(false), 450);
-    return () => clearTimeout(t);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(service.id)) {
+      const t = setTimeout(() => setLoading(false), 450);
+      return () => clearTimeout(t);
+    }
+    getSlots(date, date, minutes)
+      .then((response) => {
+        setApiSlots(
+          response.slots.map((slot) => ({
+            date: format(new Date(slot.start), "yyyy-MM-dd"),
+            time: format(new Date(slot.start), "HH:mm"),
+            stylistId: "any",
+          })),
+        );
+      })
+      .catch(() => setApiSlots([]))
+      .finally(() => setLoading(false));
   }, [date, stylistId, minutes]);
 
   const statusOf = (key: string) => dayStatus(s, service, stylistId, key, minutes);
 
-  const slots: Slot[] = date ? slotsOn(s, service, stylistId, date, minutes, { ignoreRef }) : [];
+  const slots: Slot[] = date
+    ? /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(service.id)
+      ? apiSlots ?? []
+      : slotsOn(s, service, stylistId, date, minutes, { ignoreRef })
+    : [];
   const next = date && !slots.length ? nextAvailable(s, service, stylistId, date, minutes) : null;
   const staffName = (id: string) => s.stylists.find((x) => x.id === id)?.name ?? "";
 
